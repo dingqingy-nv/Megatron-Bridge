@@ -63,11 +63,11 @@ DEEPSEEK_V3_GB200_FP8_MX_BASE_CONFIG = DEEPSEEK_V3_GB200_BASE_CONFIG
 DEEPSEEK_V3_B200_BASE_CONFIG = replace(
     BASE_DEEPSEEK_V3_CONFIG,
     num_gpus=256,
-    pipeline_model_parallel_size=8,
-    virtual_pipeline_model_parallel_size=4,
-    expert_model_parallel_size=32,
+    pipeline_model_parallel_size=16,
+    expert_model_parallel_size=16,
     global_batch_size=2048,
     recompute_modules=["mla_up_proj"],
+    moe_flex_dispatcher_backend="deepep",
     moe_a2a_overlap=False,
 )
 DEEPSEEK_V3_B200_BF16_BASE_CONFIG = DEEPSEEK_V3_B200_BASE_CONFIG
