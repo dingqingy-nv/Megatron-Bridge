@@ -13,10 +13,11 @@ PARTITION=batch
 # PYTHONPATH=$MBRIDGE/src:$MBRIDGE/scripts/performance:$PYTHONPATH  \
 PYTHONPATH=$MEGATRONPATH:$MBRIDGE/src:$MBRIDGE/scripts/performance:$PYTHONPATH  \
 python -m scripts.performance.setup_experiment -m deepseek -s v3 --task pretrain --num_gpus 256 \
--a $ACCOUNT -p $PARTITION -l $NEMORUN_HOME -i $CONT -hf $HF_TOKEN -t "00:30:00" \
+-a $ACCOUNT -p $PARTITION -l $NEMORUN_HOME -i $CONT -hf $HF_TOKEN -t "00:40:00" \
 -cm "$MBRIDGE:/opt/Megatron-Bridge,$MEGATRONPATH:/opt/megatron-lm" \
 --gpu b200 \
--gn 8 -en \
--c fp8_cs
+-gn 8 
 
+# -en \
+# -c fp8_cs \
 # -cm "$MBRIDGE:/opt/Megatron-Bridge" \

@@ -134,7 +134,7 @@ def deepseek_v3_b200_config(precision: str = "bf16") -> ConfigContainer:
         pipeline_model_parallel_size=base_cfg.pipeline_model_parallel_size,
         virtual_pipeline_model_parallel_size=base_cfg.virtual_pipeline_model_parallel_size,
         moe_flex_dispatcher_backend=base_cfg.moe_flex_dispatcher_backend,
-        layout=None,
+        layout="Et|(tt|)*30mL",
     )
     set_deepseek_v3_common_configs(cfg)
     set_workload_base_configs(cfg, base_cfg)
