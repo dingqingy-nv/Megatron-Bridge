@@ -84,7 +84,7 @@ DEEPSEEK_V3_H100_BASE_CONFIG = replace(
     expert_model_parallel_size=64,
     global_batch_size=8192,
     recompute_modules=["mla_up_proj", "mlp"],
-    moe_flex_dispatcher_backend="deepep",
+    # moe_flex_dispatcher_backend="deepep",
     moe_a2a_overlap=True,
 )
 DEEPSEEK_V3_H100_BF16_BASE_CONFIG = DEEPSEEK_V3_H100_BASE_CONFIG

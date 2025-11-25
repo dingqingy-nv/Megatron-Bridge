@@ -1,0 +1,21 @@
+export NEMORUN_HOME=/lustre/fsw/coreai_dlalgo_llm/dingqingy/MOE/.nemo_run
+MBRIDGE=/lustre/fsw/coreai_dlalgo_llm/dingqingy/MOE/Megatron-Bridge
+MEGATRONPATH=/lustre/fsw/coreai_dlalgo_llm/dingqingy/MOE/megatron-lm
+
+# CONT=gitlab-master.nvidia.com:5005/dl/joc/nemo-ci/aot_build_muon_new/train:pipe.38348673-x86
+CONT=/lustre/fsw/coreai_dlalgo_llm/dingqingy/MOE/cont_save/nemo2511rc7.sqsh
+ACCOUNT=coreai_dlalgo_llm
+PARTITION=batch
+
+# # DSV3
+# PYTHONPATH=$MBRIDGE/src:$MBRIDGE/scripts/performance:$PYTHONPATH  \
+PYTHONPATH=$MEGATRONPATH:$MBRIDGE/src:$MBRIDGE/scripts/performance:$PYTHONPATH  \
+python -m scripts.performance.setup_experiment -m deepseek -s v3 --task pretrain --num_gpus 1024 \
+-a $ACCOUNT -p $PARTITION -l $NEMORUN_HOME -i $CONT -hf $HF_TOKEN -t "00:40:00" \
+-cm "$MBRIDGE:/opt/Megatron-Bridge,$MEGATRONPATH:/opt/megatron-lm" \
+--gpu h100 \
+-gn 8 
+
+# -en \
+# -c fp8_cs \
+# -cm "$MBRIDGE:/opt/Megatron-Bridge" \
