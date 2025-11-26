@@ -30,13 +30,6 @@ logger = logging.getLogger(__name__)
 
 def set_kimi_k2_common_configs(cfg: ConfigContainer) -> None:
     """Set common performance configurations for all Kimi-K2 configs."""
-    
-    # test one node toy 
-    cfg.model.num_layers=3
-    cfg.model.num_moe_experts=8
-    cfg.model.moe_layer_freq=[0] + [1] * 2
-    cfg.model.moe_router_group_topk=1
-    
     cfg.model.seq_length = 4096
     cfg.dataset.sequence_length = 4096
 
@@ -48,7 +41,7 @@ def set_kimi_k2_common_configs(cfg: ConfigContainer) -> None:
     cfg.ddp.grad_reduce_in_fp32 = False
 
     cfg.model.moe_router_force_load_balancing = True
-    cfg.model.qk_clip = True 
+    cfg.model.qk_clip = False 
 
 
 def kimi_k2_gb300_config(precision: str = "bf16") -> ConfigContainer:
@@ -143,7 +136,7 @@ def kimi_k2_b200_config(precision: str = "bf16") -> ConfigContainer:
         virtual_pipeline_parallelism=base_cfg.virtual_pipeline_model_parallel_size,
         # moe_flex_dispatcher_backend=base_cfg.moe_flex_dispatcher_backend,
         enable_deepep=False,
-        optimizer_type="muon",
+        optimizer_type="adam",
         # layout="Et|(tt|)*30mL",
     )
     set_kimi_k2_common_configs(cfg)

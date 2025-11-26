@@ -60,56 +60,33 @@ KIMI_K2_GB200_FP8_CS_BASE_CONFIG = KIMI_K2_GB200_BASE_CONFIG
 KIMI_K2_GB200_FP8_MX_BASE_CONFIG = KIMI_K2_GB200_BASE_CONFIG
 
 
-# toy 1 nodes
 KIMI_K2_B200_BASE_CONFIG = replace(
     BASE_KIMI_K2_CONFIG,
-    num_gpus=8,
-    expert_model_parallel_size=8,
-    global_batch_size=32,
+    num_gpus=256,
+    pipeline_model_parallel_size=16,
+    expert_model_parallel_size=16,
+    global_batch_size=2048,
     recompute_modules=["mla_up_proj"],
     # moe_flex_dispatcher_backend="deepep",
+    moe_a2a_overlap=False,
 )
-
-# # full 32 nodes
-# KIMI_K2_B200_BASE_CONFIG = replace(
-#     BASE_KIMI_K2_CONFIG,
-#     num_gpus=256,
-#     pipeline_model_parallel_size=16,
-#     expert_model_parallel_size=16,
-#     global_batch_size=2048,
-#     recompute_modules=["mla_up_proj"],
-#     # moe_flex_dispatcher_backend="deepep",
-#     moe_a2a_overlap=False,
-# )
 KIMI_K2_B200_BF16_BASE_CONFIG = KIMI_K2_B200_BASE_CONFIG
 KIMI_K2_B200_FP8_CS_BASE_CONFIG = KIMI_K2_B200_BASE_CONFIG
 KIMI_K2_B200_FP8_MX_BASE_CONFIG = KIMI_K2_B200_FP8_CS_BASE_CONFIG
 
 
-# toy 1 nodes
 KIMI_K2_H100_BASE_CONFIG = replace(
     BASE_KIMI_K2_CONFIG,
-    num_gpus=8,
-    expert_model_parallel_size=8,
-    global_batch_size=32,
+    num_gpus=1024,
+    tensor_model_parallel_size=2,
+    pipeline_model_parallel_size=8,
+    virtual_pipeline_model_parallel_size=4,
+    expert_model_parallel_size=64,
+    global_batch_size=8192,
     recompute_modules=["mla_up_proj", "mlp"],
     # moe_flex_dispatcher_backend="deepep",
     moe_a2a_overlap=True,
 )
-
-# # full 32 nodes
-# KIMI_K2_H100_BASE_CONFIG = replace(
-#     BASE_KIMI_K2_CONFIG,
-#     num_gpus=1024,
-#     tensor_model_parallel_size=2,
-#     pipeline_model_parallel_size=8,
-#     virtual_pipeline_model_parallel_size=4,
-#     expert_model_parallel_size=64,
-#     global_batch_size=8192,
-#     recompute_modules=["mla_up_proj", "mlp"],
-#     # moe_flex_dispatcher_backend="deepep",
-#     moe_a2a_overlap=True,
-# )
 KIMI_K2_H100_BF16_BASE_CONFIG = KIMI_K2_H100_BASE_CONFIG
 KIMI_K2_H100_FP8_CS_BASE_CONFIG = KIMI_K2_H100_BASE_CONFIG
 KIMI_K2_H100_FP8_SC_BASE_CONFIG = KIMI_K2_H100_FP8_CS_BASE_CONFIG
