@@ -251,7 +251,7 @@ def set_user_overrides(recipe: ConfigContainer, kwargs: Dict[str, Any]) -> None:
     if kwargs.get("micro_batch_size") is not None:
         recipe.train.micro_batch_size = kwargs.get("micro_batch_size")
 
-    if kwargs.get("compute_dtype") == "bf16":
+    if kwargs.get("compute_dtype") == "bf16" and recipe.optimizer.optimizer == "adam":
         recipe.optimizer.use_precision_aware_optimizer = True
 
     if kwargs.get("megatron_ckpt") is not None:
