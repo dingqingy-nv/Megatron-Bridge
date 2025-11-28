@@ -56,6 +56,7 @@ def model_config(
     recompute_num_layers: Optional[int] = None,
     enable_deepep: bool = False,
     apply_rope_fusion: bool = False,
+    layout: Optional[Union[str, List[List[str]]]] = None,
 ) -> KimiK2Provider:
     """
     Configure the Kimi-K2 (1T) model.
@@ -112,17 +113,21 @@ def model_config(
     }
     pp_size = pipeline_parallelism or 1
     vp_size = virtual_pipeline_parallelism or 1
-    if (pp_size, vp_size) not in map_pp_vp_to_layout:
-        raise ValueError(
-            f"Invalid PP and VP size: {pp_size} and {vp_size} to infer PP layout "
-            f"for Kimi-K2. Known PP and VP combinations: {map_pp_vp_to_layout.keys()}"
-        )
-
-    layout = map_pp_vp_to_layout[(pp_size, vp_size)]
-
     if layout is not None:
-        layout = list([list(x) for x in layout])  # yield all the elements
-    cfg.pipeline_model_parallel_layout = layout
+        # Allow overriding the automatically selected layout
+        cfg.pipeline_model_parallel_layout = layout
+    else:
+        if (pp_size, vp_size) not in map_pp_vp_to_layout:
+            raise ValueError(
+                f"Invalid PP and VP size: {pp_size} and {vp_size} to infer PP layout "
+                f"for Kimi-K2. Known PP and VP combinations: {map_pp_vp_to_layout.keys()}"
+            )
+
+        layout = map_pp_vp_to_layout[(pp_size, vp_size)]
+
+        if layout is not None:
+            layout = list([list(x) for x in layout])  # yield all the elements
+        cfg.pipeline_model_parallel_layout = layout
 
     if enable_deepep:
         cfg.moe_token_dispatcher_type = "flex"
@@ -170,6 +175,7 @@ def pretrain_config(
     recompute_method: Optional[str] = None,
     recompute_num_layers: Optional[int] = None,
     apply_rope_fusion: bool = False,
+    layout: Optional[Union[str, List[List[str]]]] = None,
 ) -> ConfigContainer:
     """
     Create a pre-training configuration for Kimi-K2 (1T) model.
@@ -200,6 +206,7 @@ def pretrain_config(
         recompute_num_layers=recompute_num_layers,
         enable_deepep=enable_deepep,
         apply_rope_fusion=apply_rope_fusion,
+        layout=layout,
     )
 
     if optimizer_type == "adam":
