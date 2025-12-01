@@ -137,7 +137,7 @@ def kimi_k2_b200_config(precision: str = "bf16") -> ConfigContainer:
         # moe_flex_dispatcher_backend=base_cfg.moe_flex_dispatcher_backend,
         enable_deepep=True,
         optimizer_type="muon",
-        layout="Et|(tt|)*30mL",
+        layout="Et|(tt|)*30L",
     )
     set_kimi_k2_common_configs(cfg)
     set_workload_base_configs(cfg, base_cfg)
@@ -165,8 +165,8 @@ def kimi_k2_h100_config(precision: str = "bf16") -> ConfigContainer:
         virtual_pipeline_parallelism=base_cfg.virtual_pipeline_model_parallel_size,
         # moe_flex_dispatcher_backend=base_cfg.moe_flex_dispatcher_backend,
         enable_deepep=False,
-        optimizer_type="adam",
-        layout="Et|(tt|)*30mL",
+        optimizer_type="muon",
+        layout="Et|(tt|)*30L",
     )
     set_kimi_k2_common_configs(cfg)
     set_workload_base_configs(cfg, base_cfg)
