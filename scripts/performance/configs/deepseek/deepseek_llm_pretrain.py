@@ -31,7 +31,6 @@ logger = logging.getLogger(__name__)
 def set_deepseek_v3_common_configs(cfg: ConfigContainer, moe_a2a_overlap: bool = False) -> None:
     """Set common performance configurations for all DeepSeek-V3 configs."""
     cfg.model.seq_length = 4096
-    cfg.model.moe_enable_deepep = True
     cfg.dataset.sequence_length = 4096
 
     cfg.model.moe_router_fusion = True

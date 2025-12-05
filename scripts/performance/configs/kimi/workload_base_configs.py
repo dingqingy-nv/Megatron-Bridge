@@ -80,12 +80,12 @@ KIMI_K2_H100_BASE_CONFIG = replace(
     num_gpus=1024,
     tensor_model_parallel_size=2,
     pipeline_model_parallel_size=8,
-    virtual_pipeline_model_parallel_size=4,
+    # virtual_pipeline_model_parallel_size=4,
     expert_model_parallel_size=64,
     global_batch_size=8192,
     recompute_modules=["mla_up_proj", "mlp"],
     # moe_flex_dispatcher_backend="deepep",
-    moe_a2a_overlap=True,
+    moe_a2a_overlap=False,
 )
 KIMI_K2_H100_BF16_BASE_CONFIG = KIMI_K2_H100_BASE_CONFIG
 KIMI_K2_H100_FP8_CS_BASE_CONFIG = KIMI_K2_H100_BASE_CONFIG
