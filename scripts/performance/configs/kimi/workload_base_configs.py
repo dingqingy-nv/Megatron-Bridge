@@ -63,8 +63,9 @@ KIMI_K2_GB200_FP8_MX_BASE_CONFIG = KIMI_K2_GB200_BASE_CONFIG
 KIMI_K2_B200_BASE_CONFIG = replace(
     BASE_KIMI_K2_CONFIG,
     num_gpus=256,
-    pipeline_model_parallel_size=16,
-    expert_model_parallel_size=16,
+    pipeline_model_parallel_size=8,
+    virtual_pipeline_model_parallel_size=4,
+    expert_model_parallel_size=32,
     global_batch_size=2048,
     recompute_modules=["mla_up_proj"],
     moe_flex_dispatcher_backend="deepep",
