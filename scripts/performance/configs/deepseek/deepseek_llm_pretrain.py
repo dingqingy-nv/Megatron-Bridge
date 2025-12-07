@@ -31,7 +31,6 @@ logger = logging.getLogger(__name__)
 def set_deepseek_v3_common_configs(cfg: ConfigContainer, moe_a2a_overlap: bool = False) -> None:
     """Set common performance configurations for all DeepSeek-V3 configs."""
     cfg.model.seq_length = 4096
-    cfg.model.moe_enable_deepep = True
     cfg.dataset.sequence_length = 4096
 
     cfg.model.moe_router_fusion = True
@@ -135,7 +134,7 @@ def deepseek_v3_b200_config(precision: str = "bf16") -> ConfigContainer:
         pipeline_model_parallel_size=base_cfg.pipeline_model_parallel_size,
         virtual_pipeline_model_parallel_size=base_cfg.virtual_pipeline_model_parallel_size,
         moe_flex_dispatcher_backend=base_cfg.moe_flex_dispatcher_backend,
-        layout="Et|(tt|)*30mL",
+        layout=None,
     )
     set_deepseek_v3_common_configs(cfg)
     set_workload_base_configs(cfg, base_cfg)
