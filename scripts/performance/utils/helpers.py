@@ -85,7 +85,7 @@ def set_workload_base_configs(cfg: ConfigContainer, settings: WorkloadBaseConfig
 
 def set_common_perf_overrides(recipe: ConfigContainer) -> None:
     """Set common performance overrides shared across recipes."""
-    recipe.train.train_iters = 50
+    recipe.train.train_iters = 20
     recipe.train.eval_iters = 0
 
     recipe.checkpoint.save = None
