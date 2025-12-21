@@ -41,13 +41,6 @@ logger = logging.getLogger(__name__)
 
 def set_kimi_k2_common_configs(cfg: ConfigContainer) -> None:
     """Set common performance configurations for all Kimi-K2 configs."""
-    
-    # test one node toy 
-    cfg.model.num_layers=3
-    cfg.model.num_moe_experts=8
-    cfg.model.moe_layer_freq=[0] + [1] * 2
-    cfg.model.moe_router_group_topk=1
-    
     cfg.model.seq_length = 4096
     cfg.dataset.sequence_length = 4096
 
@@ -152,7 +145,6 @@ def kimi_k2_pretrain_config_b200(precision: str = "bf16", mock: bool = True) -> 
         precision_config=precision_config,
         pipeline_model_parallel_size=base_cfg.pipeline_model_parallel_size,
         virtual_pipeline_model_parallel_size=base_cfg.virtual_pipeline_model_parallel_size,
-        # moe_flex_dispatcher_backend=base_cfg.moe_flex_dispatcher_backend,
         enable_deepep=True,
         optimizer_type="muon",
         # layout="Et|(tt|)*30mL",

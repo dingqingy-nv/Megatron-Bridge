@@ -8,11 +8,11 @@ ACCOUNT=coreai_dlalgo_llm
 PARTITION=batch
 
 PROJ=dingqingy-12-21-kimi-k2
-EXP=prenyx-toy-1node
+EXP=prenyx
 
 # Kimi K2
 PYTHONPATH=$MEGATRONPATH:$MBRIDGE/src:$MBRIDGE/scripts/performance:$PYTHONPATH  \
-python -m scripts.performance.setup_experiment -m kimi -mr kimi_k2 --task pretrain --num_gpus 8 \
+python -m scripts.performance.setup_experiment -m kimi -mr kimi_k2 --task pretrain --num_gpus 256 \
 -a $ACCOUNT -p $PARTITION -l $NEMORUN_HOME -i $CONT -hf $HF_TOKEN -t "00:30:00" \
 -wdk $WB_TOKEN -wdp $PROJ -wdj $EXP \
 -cm "$MBRIDGE:/opt/Megatron-Bridge,$MEGATRONPATH:/opt/megatron-lm" \
