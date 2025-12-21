@@ -42,6 +42,7 @@ def set_kimi_k2_common_configs(cfg: ConfigContainer) -> None:
 
     cfg.model.moe_router_force_load_balancing = True
     cfg.model.qk_clip = False 
+    cfg.model.qk_clip_threshold = 1 
 
 
 def kimi_k2_gb300_config(precision: str = "bf16") -> ConfigContainer:
@@ -136,7 +137,7 @@ def kimi_k2_b200_config(precision: str = "bf16") -> ConfigContainer:
         virtual_pipeline_parallelism=base_cfg.virtual_pipeline_model_parallel_size,
         # moe_flex_dispatcher_backend=base_cfg.moe_flex_dispatcher_backend,
         enable_deepep=True,
-        optimizer_type="adam",
+        optimizer_type="muon",
         layout=None,
     )
     set_kimi_k2_common_configs(cfg)

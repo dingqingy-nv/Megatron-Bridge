@@ -678,7 +678,9 @@ def train_step(
     # Part of MuonClip Optimizer step
     log_max_attention_logit = None
     if hasattr(cfg.model, "qk_clip") and cfg.model.qk_clip:
+        torch.cuda.nvtx.range_push("qk clip")
         log_max_attention_logit = clip_qk(model)
+        torch.cuda.nvtx.range_pop()
 
     timers("optimizer").stop()
 
