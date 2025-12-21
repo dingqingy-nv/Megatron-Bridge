@@ -14,15 +14,26 @@
 
 import logging
 
-from utils.helpers import (
-    get_precision_config,
-    set_workload_base_configs,
-)
+from utils.overrides import set_workload_base_configs
+from utils.precision import get_precision_config
 
-from megatron.bridge.recipes.kimi.kimi_k2 import pretrain_config
+from megatron.bridge.recipes.kimi.kimi_k2 import kimi_k2_pretrain_config as pretrain_config
 from megatron.bridge.training.config import ConfigContainer
 
-from . import workload_base_configs as base_cfgs
+from .kimi_workload_base_configs import (
+    KIMI_K2_PRETRAIN_CONFIG_B200_BF16,
+    KIMI_K2_PRETRAIN_CONFIG_B200_FP8_CS,
+    KIMI_K2_PRETRAIN_CONFIG_B200_FP8_MX,
+    KIMI_K2_PRETRAIN_CONFIG_GB200_BF16,
+    KIMI_K2_PRETRAIN_CONFIG_GB200_FP8_CS,
+    KIMI_K2_PRETRAIN_CONFIG_GB200_FP8_MX,
+    KIMI_K2_PRETRAIN_CONFIG_GB300_BF16,
+    KIMI_K2_PRETRAIN_CONFIG_GB300_FP8_CS,
+    KIMI_K2_PRETRAIN_CONFIG_GB300_FP8_MX,
+    KIMI_K2_PRETRAIN_CONFIG_H100_BF16,
+    KIMI_K2_PRETRAIN_CONFIG_H100_FP8_CS,
+    KIMI_K2_PRETRAIN_CONFIG_H100_FP8_SC,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -48,22 +59,22 @@ def set_kimi_k2_common_configs(cfg: ConfigContainer) -> None:
     cfg.ddp.grad_reduce_in_fp32 = False
 
     cfg.model.moe_router_force_load_balancing = True
-    cfg.model.qk_clip = False # eventually True
+    cfg.model.qk_clip = True
 
 
-def kimi_k2_gb300_config(precision: str = "bf16") -> ConfigContainer:
+def kimi_k2_pretrain_config_gb300(precision: str = "bf16", mock: bool = True) -> ConfigContainer:
     """GB300, baseline config."""
     if precision == "bf16":
-        base_cfg = base_cfgs.KIMI_K2_GB300_BF16_BASE_CONFIG
+        base_cfg = KIMI_K2_PRETRAIN_CONFIG_GB300_BF16
         precision_config = get_precision_config(precision)
     else:
-        base_cfg = base_cfgs.KIMI_K2_GB300_FP8_CS_BASE_CONFIG
+        base_cfg = KIMI_K2_PRETRAIN_CONFIG_GB300_FP8_CS
         if precision == "fp8_mx":
-            base_cfg = base_cfgs.KIMI_K2_GB300_FP8_MX_BASE_CONFIG
+            base_cfg = KIMI_K2_PRETRAIN_CONFIG_GB300_FP8_MX
         precision_config = get_precision_config(precision)
 
     cfg = pretrain_config(
-        mock=True,
+        mock=mock,
         precision_config=precision_config,
         pipeline_model_parallel_size=base_cfg.pipeline_model_parallel_size,
         virtual_pipeline_model_parallel_size=base_cfg.virtual_pipeline_model_parallel_size,
@@ -88,19 +99,19 @@ def kimi_k2_gb300_config(precision: str = "bf16") -> ConfigContainer:
     return cfg
 
 
-def kimi_k2_gb200_config(precision: str = "bf16") -> ConfigContainer:
+def kimi_k2_pretrain_config_gb200(precision: str = "bf16", mock: bool = True) -> ConfigContainer:
     """GB200, baseline config."""
     if precision == "bf16":
-        base_cfg = base_cfgs.KIMI_K2_GB200_BF16_BASE_CONFIG
+        base_cfg = KIMI_K2_PRETRAIN_CONFIG_GB200_BF16
         precision_config = get_precision_config(precision)
     else:
-        base_cfg = base_cfgs.KIMI_K2_GB200_FP8_CS_BASE_CONFIG
+        base_cfg = KIMI_K2_PRETRAIN_CONFIG_GB200_FP8_CS
         if precision == "fp8_mx":
-            base_cfg = base_cfgs.KIMI_K2_GB200_FP8_MX_BASE_CONFIG
+            base_cfg = KIMI_K2_PRETRAIN_CONFIG_GB200_FP8_MX
         precision_config = get_precision_config(precision)
 
     cfg = pretrain_config(
-        mock=True,
+        mock=mock,
         precision_config=precision_config,
         pipeline_model_parallel_size=base_cfg.pipeline_model_parallel_size,
         virtual_pipeline_model_parallel_size=base_cfg.virtual_pipeline_model_parallel_size,
@@ -125,25 +136,25 @@ def kimi_k2_gb200_config(precision: str = "bf16") -> ConfigContainer:
     return cfg
 
 
-def kimi_k2_b200_config(precision: str = "bf16") -> ConfigContainer:
+def kimi_k2_pretrain_config_b200(precision: str = "bf16", mock: bool = True) -> ConfigContainer:
     """B200, baseline config."""
     if precision == "bf16":
-        base_cfg = base_cfgs.KIMI_K2_B200_BF16_BASE_CONFIG
+        base_cfg = KIMI_K2_PRETRAIN_CONFIG_B200_BF16
         precision_config = get_precision_config(precision)
     else:
-        base_cfg = base_cfgs.KIMI_K2_B200_FP8_CS_BASE_CONFIG
+        base_cfg = KIMI_K2_PRETRAIN_CONFIG_B200_FP8_CS
         if precision == "fp8_mx":
-            base_cfg = base_cfgs.KIMI_K2_B200_FP8_MX_BASE_CONFIG
+            base_cfg = KIMI_K2_PRETRAIN_CONFIG_B200_FP8_MX
         precision_config = get_precision_config(precision)
 
     cfg = pretrain_config(
-        mock=True,
+        mock=mock,
         precision_config=precision_config,
-        pipeline_parallelism=base_cfg.pipeline_model_parallel_size,
-        virtual_pipeline_parallelism=base_cfg.virtual_pipeline_model_parallel_size,
+        pipeline_model_parallel_size=base_cfg.pipeline_model_parallel_size,
+        virtual_pipeline_model_parallel_size=base_cfg.virtual_pipeline_model_parallel_size,
         # moe_flex_dispatcher_backend=base_cfg.moe_flex_dispatcher_backend,
-        enable_deepep=False,
-        optimizer_type="adam",
+        enable_deepep=True,
+        optimizer_type="muon",
         # layout="Et|(tt|)*30mL",
     )
     set_kimi_k2_common_configs(cfg)
@@ -154,25 +165,24 @@ def kimi_k2_b200_config(precision: str = "bf16") -> ConfigContainer:
     return cfg
 
 
-def kimi_k2_h100_config(precision: str = "bf16") -> ConfigContainer:
+def kimi_k2_pretrain_config_h100(precision: str = "bf16", mock: bool = True) -> ConfigContainer:
     """H100, baseline config."""
     if precision == "bf16":
-        base_cfg = base_cfgs.KIMI_K2_H100_BF16_BASE_CONFIG
+        base_cfg = KIMI_K2_PRETRAIN_CONFIG_H100_BF16
         precision_config = get_precision_config(precision)
     else:
-        base_cfg = base_cfgs.KIMI_K2_H100_FP8_CS_BASE_CONFIG
+        base_cfg = KIMI_K2_PRETRAIN_CONFIG_H100_FP8_CS
         if precision == "fp8_sc":
-            base_cfg = base_cfgs.KIMI_K2_H100_FP8_SC_BASE_CONFIG
+            base_cfg = KIMI_K2_PRETRAIN_CONFIG_H100_FP8_SC
         precision_config = get_precision_config(precision)
 
     cfg = pretrain_config(
-        mock=True,
+        mock=mock,
         precision_config=precision_config,
-        pipeline_parallelism=base_cfg.pipeline_model_parallel_size,
-        virtual_pipeline_parallelism=base_cfg.virtual_pipeline_model_parallel_size,
-        # moe_flex_dispatcher_backend=base_cfg.moe_flex_dispatcher_backend,
+        pipeline_model_parallel_size=base_cfg.pipeline_model_parallel_size,
+        virtual_pipeline_model_parallel_size=base_cfg.virtual_pipeline_model_parallel_size,
         enable_deepep=False,
-        optimizer_type="adam",
+        optimizer_type="muon",
         # layout="Et|(tt|)*30mL",
     )
     set_kimi_k2_common_configs(cfg)
