@@ -75,28 +75,17 @@ KIMI_K2_PRETRAIN_CONFIG_B200_FP8_CS = KIMI_K2_PRETRAIN_CONFIG_B200
 KIMI_K2_PRETRAIN_CONFIG_B200_FP8_MX = KIMI_K2_PRETRAIN_CONFIG_B200
 
 
-# toy 1 nodes
 KIMI_K2_PRETRAIN_CONFIG_H100 = replace(
     BASE_KIMI_K2_CONFIG,
-    num_gpus=8,
-    expert_model_parallel_size=8,
-    global_batch_size=32,
+    num_gpus=1024,
+    tensor_model_parallel_size=8,
+    pipeline_model_parallel_size=8,
+    # virtual_pipeline_model_parallel_size=4,
+    expert_model_parallel_size=16,
+    global_batch_size=8192,
     recompute_modules=["mla_up_proj", "mlp"],
     # moe_a2a_overlap=True,
 )
-
-# # full 32 nodes
-# KIMI_K2_PRETRAIN_CONFIG_H100 = replace(
-#     BASE_KIMI_K2_CONFIG,
-#     num_gpus=1024,
-#     tensor_model_parallel_size=2,
-#     pipeline_model_parallel_size=8,
-#     virtual_pipeline_model_parallel_size=4,
-#     expert_model_parallel_size=64,
-#     global_batch_size=8192,
-#     recompute_modules=["mla_up_proj", "mlp"],
-#     moe_a2a_overlap=True,
-# )
 KIMI_K2_PRETRAIN_CONFIG_H100_BF16 = KIMI_K2_PRETRAIN_CONFIG_H100
 KIMI_K2_PRETRAIN_CONFIG_H100_FP8_CS = KIMI_K2_PRETRAIN_CONFIG_H100
 KIMI_K2_PRETRAIN_CONFIG_H100_FP8_SC = KIMI_K2_PRETRAIN_CONFIG_H100

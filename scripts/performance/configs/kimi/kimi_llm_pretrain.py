@@ -174,7 +174,7 @@ def kimi_k2_pretrain_config_h100(precision: str = "bf16", mock: bool = True) -> 
         pipeline_model_parallel_size=base_cfg.pipeline_model_parallel_size,
         virtual_pipeline_model_parallel_size=base_cfg.virtual_pipeline_model_parallel_size,
         enable_deepep=False,
-        optimizer_type="muon",
+        optimizer_type="adam",
         # layout="Et|(tt|)*30mL",
     )
     set_kimi_k2_common_configs(cfg)
