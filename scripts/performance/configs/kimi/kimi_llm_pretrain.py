@@ -41,8 +41,8 @@ logger = logging.getLogger(__name__)
 
 def set_kimi_k2_common_configs(cfg: ConfigContainer) -> None:
     """Set common performance configurations for all Kimi-K2 configs."""
-    cfg.model.num_layers=29
-    cfg.model.moe_layer_freq=[0]+[1]*28
+    # cfg.model.num_layers=31
+    # cfg.model.moe_layer_freq=[0]+[1]*30
     
     cfg.model.seq_length = 4096
     cfg.dataset.sequence_length = 4096
@@ -177,8 +177,8 @@ def kimi_k2_pretrain_config_h100(precision: str = "bf16", mock: bool = True) -> 
         virtual_pipeline_model_parallel_size=base_cfg.virtual_pipeline_model_parallel_size,
         enable_deepep=False,
         optimizer_type="muon",
-        layout="Et|(tt|)*14L",
-        # layout="Et|(tt|)*30L",
+        # layout="Et|(tt|)*14L",
+        layout="Et|(tt|)*30L",
     )
     set_kimi_k2_common_configs(cfg)
     set_workload_base_configs(cfg, base_cfg)

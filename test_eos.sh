@@ -7,8 +7,8 @@ CONT=$ROOTDIR/cont_save/nemo2511rc7.sqsh
 ACCOUNT=coreai_dlalgo_llm
 PARTITION=batch
 
-PROJ=dingqingy-12-23-kimi-k2
-EXP=eos-29-layers-PP8
+PROJ=dingqingy-12-24-kimi-k2
+EXP=eos-PP16-VP2
 
 # kimi k2
 PYTHONPATH=$MEGATRONPATH:$MBRIDGE/src:$MBRIDGE/scripts/performance:$PYTHONPATH  \
