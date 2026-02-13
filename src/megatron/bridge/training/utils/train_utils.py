@@ -734,7 +734,7 @@ def training_log(
         total_loss_dict[nan_iters_key] = 0
         print_rank_last(log_string)
         if report_memory_flag:
-            # Report memory after optimizer state has been initialized.
+            # Legacy: report memory on first log interval. Prefer memory_report_iteration (e.g. 2) for OOM headroom.
             if torch.distributed.get_rank() == 0:
                 num_microbatches = get_num_microbatches()
                 report_theoretical_memory(config, num_microbatches=num_microbatches, verbose=True)

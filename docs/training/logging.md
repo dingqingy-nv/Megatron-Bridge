@@ -44,6 +44,8 @@ Use the following options to enable additional diagnostics and performance monit
 - **`log_params_norm`**: Computes and logs the L2 norm of model parameters. If available, it also logs the gradient norm.
 - **`log_energy`**: Activates the energy monitor, which records per-GPU energy consumption and instantaneous power usage.
 - **`log_memory`**: Logs the memory usage of the model from `torch.cuda.memory_stats()`.
+- **`memory_report_iteration`**: Iteration at which the one-shot console memory report (reserved/allocated and theoretical) is printed. Peak GPU memory typically occurs by the second iteration; default is ``2`` for better OOM headroom quantification. Set to ``None`` for legacy behavior (report on first log interval).
+- **`log_memory_to_tensorboard`**: When enabled, logs memory reserved/allocated (current and peak) to TensorBoard every ``tensorboard_log_interval`` iterations, giving per-iteration memory series.
 - **`log_throughput_to_tensorboard`**: Calculates the training throughput and utilization.
 - **`log_runtime_to_tensorboard`**: Estimates total time remaining until the end of the training.
 - **`log_l2_norm_grad_to_tensorboard`**: Computes and logs the L2 norm of gradients for each model layer.

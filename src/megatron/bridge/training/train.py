@@ -74,11 +74,13 @@ from megatron.bridge.training.tensor_inspect import (
 )
 from megatron.bridge.training.utils import flop_utils
 from megatron.bridge.training.utils.log_utils import append_to_progress_log, barrier_and_log
+from megatron.bridge.training.utils.theoretical_memory_utils import report_theoretical_memory
 from megatron.bridge.training.utils.train_utils import (
     calc_params_l2_norm,
     logical_and_across_model_parallel_group,
     prepare_forward_step_func,
     reduce_max_stat_across_model_parallel_group,
+    report_memory,
     training_log,
 )
 from megatron.bridge.utils.common_utils import get_world_size_safe, print_rank_0
@@ -161,7 +163,8 @@ def train(
         energy_monitor.resume()
 
     timers("interval-time", log_level=0).start(barrier=True)
-    report_memory_flag = True
+    # When memory_report_iteration is set, report at that step; otherwise report on first log (legacy).
+    report_memory_flag = config.logger.memory_report_iteration is None
     pre_hook_enabled = False
     should_exit = False
     exit_code = 0
@@ -497,6 +500,22 @@ def train(
             model,
             log_max_attention_logit,
         )
+
+        # One-shot memory report at configured iteration (e.g. 2) for better OOM headroom quantification.
+        logger_config = config.logger
+        if (
+            logger_config.memory_report_iteration is not None
+            and global_state.train_state.step == logger_config.memory_report_iteration
+        ):
+            if torch.distributed.get_rank() == 0:
+                num_microbatches = get_num_microbatches()
+                report_theoretical_memory(config, num_microbatches=num_microbatches, verbose=True)
+            memory_string = f"(after {global_state.train_state.step} iterations) memory (GB)"
+            for metric, value in report_memory(logger_config.memory_keys).items():
+                memory_string += f" | {metric}: {value}"
+            if torch.distributed.get_rank(group=pg_collection.dp) == 0:
+                print("[Rank {}] {}".format(torch.distributed.get_rank(), memory_string), flush=True)
+            report_memory_flag = False
 
         if (
             global_state.train_state.do_valid

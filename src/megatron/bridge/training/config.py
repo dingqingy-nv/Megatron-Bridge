@@ -984,6 +984,11 @@ class LoggerConfig:
     memory_keys: dict[str, str] | None = None
     """Names of memory statistics to log from `torch.cuda.memory_stats()`"""
 
+    memory_report_iteration: int | None = 2
+    """Iteration at which to print the one-shot console memory report (reserved/allocated, theoretical).
+    Peak GPU memory typically occurs by the second iteration, so reporting at iteration 2 better
+    quantifies headroom to OOM. Set to None to use legacy behavior (report on first log interval)."""
+
     log_l2_norm_grad_to_tensorboard: bool = False
     """Enable gradients logging to tensorboard."""
 
