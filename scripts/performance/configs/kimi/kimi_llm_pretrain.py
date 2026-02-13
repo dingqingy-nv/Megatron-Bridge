@@ -21,6 +21,7 @@ from utils.utils import get_workload_base_config
 from megatron.bridge.recipes.kimi.kimi_k2 import _get_kimi_k2_pipeline_layout
 from megatron.bridge.recipes.kimi.kimi_k2 import kimi_k2_pretrain_config as pretrain_config
 from megatron.bridge.training.config import ConfigContainer
+from megatron.bridge.training.flex_dispatcher_backend import apply_flex_dispatcher_backend
 
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,16 @@ def set_kimi_k2_common_configs(cfg: ConfigContainer) -> None:
     """Set common performance configurations for all Kimi-K2 configs."""
     cfg.model.seq_length = 4096
     cfg.dataset.sequence_length = 4096
+
+    # WAR: MXFP8's fp8_param_gather and reuse_grad_buf_for_mxfp8_param_ag require
+    # DistributedOptimizer infrastructure (param/grad buffers, buckets), which is
+    # incompatible with dist_muon's LayerWiseDistributedOptimizer (wraps sub-optimizers
+    # in Float16OptimizerWithFloat16Params, not DistributedOptimizer).
+    # Disable these flags for MXFP8 + Muon. This uses more GPU memory but avoids the
+    # AttributeError on _copy_main_params_to_param_buffer.
+    if cfg.mixed_precision is not None and cfg.mixed_precision.fp8_recipe == "mxfp8":
+        cfg.mixed_precision.reuse_grad_buf_for_mxfp8_param_ag = False
+        cfg.mixed_precision.fp8_param_gather = False
 
     cfg.model.moe_router_fusion = True
     cfg.model.recompute_granularity = "selective"
@@ -61,6 +72,7 @@ def kimi_k2_pretrain_config_gb300(
 
     if base_cfg.moe_flex_dispatcher_backend is not None:
         cfg.model.moe_flex_dispatcher_backend = base_cfg.moe_flex_dispatcher_backend
+    apply_flex_dispatcher_backend(cfg.model, cfg.model.moe_flex_dispatcher_backend)
 
     if base_cfg.pp_layout:
         cfg.model.pipeline_model_parallel_layout = base_cfg.pp_layout
@@ -103,6 +115,7 @@ def kimi_k2_pretrain_config_gb200(
 
     if base_cfg.moe_flex_dispatcher_backend is not None:
         cfg.model.moe_flex_dispatcher_backend = base_cfg.moe_flex_dispatcher_backend
+    apply_flex_dispatcher_backend(cfg.model, cfg.model.moe_flex_dispatcher_backend)
 
     if base_cfg.pp_layout:
         cfg.model.pipeline_model_parallel_layout = base_cfg.pp_layout
@@ -145,6 +158,7 @@ def kimi_k2_pretrain_config_b200(
 
     if base_cfg.moe_flex_dispatcher_backend is not None:
         cfg.model.moe_flex_dispatcher_backend = base_cfg.moe_flex_dispatcher_backend
+    apply_flex_dispatcher_backend(cfg.model, cfg.model.moe_flex_dispatcher_backend)
 
     if base_cfg.pp_layout:
         cfg.model.pipeline_model_parallel_layout = base_cfg.pp_layout
@@ -182,6 +196,7 @@ def kimi_k2_pretrain_config_h100(
 
     if base_cfg.moe_flex_dispatcher_backend is not None:
         cfg.model.moe_flex_dispatcher_backend = base_cfg.moe_flex_dispatcher_backend
+    apply_flex_dispatcher_backend(cfg.model, cfg.model.moe_flex_dispatcher_backend)
 
     if base_cfg.pp_layout:
         cfg.model.pipeline_model_parallel_layout = base_cfg.pp_layout

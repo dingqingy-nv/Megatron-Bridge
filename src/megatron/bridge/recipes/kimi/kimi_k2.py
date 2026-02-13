@@ -102,6 +102,33 @@ def kimi_k2_pretrain_config(**user_kwargs: Unpack[KimiK2CommonKwargs]) -> Config
     return _kimi_k2_common(**combined_kwargs)
 
 
+_MAP_PP_VP_TO_LAYOUT = {
+    (1, 1): None,
+    (4, 1): [["embedding"] + ["decoder"] * 16, ["decoder"] * 16, ["decoder"] * 16, ["decoder"] * 13 + ["loss"]],
+    (8, 1): [["embedding"] + ["decoder"] * 8] + [["decoder"] * 8] * 6 + [["decoder"] * 5 + ["loss"]],
+    (4, 2): [["embedding"] + ["decoder"] * 8] + [["decoder"] * 8] * 6 + [["decoder"] * 5 + ["loss"]],
+    (16, 1): [["embedding"] + ["decoder"] * 4] + [["decoder"] * 4] * 14 + [["decoder", "loss"]],
+    (8, 2): [["embedding"] + ["decoder"] * 4] + [["decoder"] * 4] * 14 + [["decoder", "loss"]],
+    (4, 4): [["embedding"] + ["decoder"] * 4] + [["decoder"] * 4] * 14 + [["decoder", "loss"]],
+    (2, 8): None,  # Uses string-based pp_layout from workload config
+}
+
+
+def _get_kimi_k2_pipeline_layout(pp_size, vp_size):
+    """Get the pipeline layout for Kimi-K2 given PP and VP sizes."""
+    pp_size = pp_size or 1
+    vp_size = vp_size or 1
+    if (pp_size, vp_size) not in _MAP_PP_VP_TO_LAYOUT:
+        raise ValueError(
+            f"Invalid PP and VP size: {pp_size} and {vp_size} to infer PP layout "
+            f"for Kimi-K2. Known PP and VP combinations: {_MAP_PP_VP_TO_LAYOUT.keys()}"
+        )
+    layout = _MAP_PP_VP_TO_LAYOUT[(pp_size, vp_size)]
+    if layout is not None:
+        layout = [list(x) for x in layout]
+    return layout
+
+
 def _kimi_k2_model_config(
     tensor_model_parallel_size: int = 2,
     pipeline_model_parallel_size: int = 16,
@@ -167,28 +194,9 @@ def _kimi_k2_model_config(
         cfg.apply_rope_fusion = True
 
     # Pipeline parallelism configs. We infer PP layout from the provided PP and VP size
-    map_pp_vp_to_layout = {
-        (1, 1): None,
-        (4, 1): [["embedding"] + ["decoder"] * 16, ["decoder"] * 16, ["decoder"] * 16, ["decoder"] * 13 + ["loss"]],
-        (8, 1): [["embedding"] + ["decoder"] * 8] + [["decoder"] * 8] * 6 + [["decoder"] * 5 + ["loss"]],
-        (4, 2): [["embedding"] + ["decoder"] * 8] + [["decoder"] * 8] * 6 + [["decoder"] * 5 + ["loss"]],
-        (16, 1): [["embedding"] + ["decoder"] * 4] + [["decoder"] * 4] * 14 + [["decoder", "loss"]],
-        (8, 2): [["embedding"] + ["decoder"] * 4] + [["decoder"] * 4] * 14 + [["decoder", "loss"]],
-        (4, 4): [["embedding"] + ["decoder"] * 4] + [["decoder"] * 4] * 14 + [["decoder", "loss"]],
-    }
-    pp_size = pipeline_model_parallel_size or 1
-    vp_size = virtual_pipeline_model_parallel_size or 1
-    if (pp_size, vp_size) not in map_pp_vp_to_layout:
-        raise ValueError(
-            f"Invalid PP and VP size: {pp_size} and {vp_size} to infer PP layout "
-            f"for Kimi-K2. Known PP and VP combinations: {map_pp_vp_to_layout.keys()}"
-        )
-
-    layout = map_pp_vp_to_layout[(pp_size, vp_size)]
-
-    if layout is not None:
-        layout = list([list(x) for x in layout])  # yield all the elements
-    cfg.pipeline_model_parallel_layout = layout
+    cfg.pipeline_model_parallel_layout = _get_kimi_k2_pipeline_layout(
+        pipeline_model_parallel_size, virtual_pipeline_model_parallel_size
+    )
 
     if enable_deepep:
         cfg.moe_token_dispatcher_type = "flex"
@@ -387,6 +395,24 @@ def _kimi_k2_common(
 
     if apply_rope_fusion:
         cfg.dist.enable_megatron_core_experimental = True  # for mla rope fusion
+
+    # WAR: MXFP8's fp8_param_gather and reuse_grad_buf_for_mxfp8_param_ag require
+    # DistributedOptimizer infrastructure (param/grad buffers, buckets), which is
+    # incompatible with dist_muon's LayerWiseDistributedOptimizer. The layerwise optimizer
+    # wraps sub-optimizers in Float16OptimizerWithFloat16Params (not DistributedOptimizer),
+    # which lacks _copy_main_params_to_param_buffer().
+    # Disable these flags when using Muon + MXFP8. This uses more GPU memory but avoids
+    # the crash. See also: overlap_param_gather=False and use_distributed_optimizer=False
+    # in the DDP config above.
+    if optimizer_type == "muon" and cfg.mixed_precision is not None:
+        mp = cfg.mixed_precision
+        if isinstance(mp, MixedPrecisionConfig) and mp.fp8_recipe == "mxfp8":
+            logger.warning(
+                "Disabling fp8_param_gather and reuse_grad_buf_for_mxfp8_param_ag "
+                "for MXFP8 + Muon (incompatible with LayerWiseDistributedOptimizer)."
+            )
+            mp.reuse_grad_buf_for_mxfp8_param_ag = False
+            mp.fp8_param_gather = False
 
     if cfg.comm_overlap is None:
         cfg.comm_overlap = CommOverlapConfig(
