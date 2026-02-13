@@ -224,14 +224,11 @@ LLAMA31_405B_PRETRAIN_CONFIG_GB300_BF16_V2 = replace(
 
 LLAMA31_405B_PRETRAIN_CONFIG_GB300_FP8_CS_V2 = replace(
     LLAMA31_405B_PRETRAIN_CONFIG_GB300_FP8_CS_V1,
-    tensor_model_parallel_size=4,
-    pipeline_model_parallel_size=8,
-    context_parallel_size=1,
-    virtual_pipeline_model_parallel_size=4,
     num_gpus=256,
     global_batch_size=1536,
-    use_megatron_fsdp=False,
-    cpu_offloading_num_layers=None,
+    use_megatron_fsdp=True,
+    nccl_ub=False,
+    cpu_offloading_num_layers=40,
 )
 
 

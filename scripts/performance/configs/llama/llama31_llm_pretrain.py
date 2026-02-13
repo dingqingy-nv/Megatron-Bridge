@@ -68,7 +68,9 @@ def llama31_405b_pretrain_config_gb300(
 
     if cfg.ddp.use_megatron_fsdp:
         cfg.ddp.fsdp_double_buffer = True
-        cfg.model.gradient_accumulation_fusion = False  # Disabled to avoid functional errors
+        cfg.model.gradient_accumulation_fusion = False
+        # HSDP: 4 instances for default multi-node; override with ddp.num_distributed_optimizer_instances=1 for TP1 isolation
+        cfg.ddp.num_distributed_optimizer_instances = 4
 
     cfg.comm_overlap.tp_comm_overlap_cfg = comm_overlap_cfg
     cfg.comm_overlap.tp_comm_overlap = False if precision == "nvfp4" else cfg.comm_overlap.tp_comm_overlap
