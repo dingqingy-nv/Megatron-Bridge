@@ -36,9 +36,12 @@ def set_kimi_k2_common_configs(cfg: ConfigContainer) -> None:
     # DistributedOptimizer infrastructure (param/grad buffers, buckets), which is
     # incompatible with dist_muon's LayerWiseDistributedOptimizer (wraps sub-optimizers
     # in Float16OptimizerWithFloat16Params, not DistributedOptimizer).
-    # Disable these flags for MXFP8 + Muon. This uses more GPU memory but avoids the
-    # AttributeError on _copy_main_params_to_param_buffer.
-    if cfg.mixed_precision is not None and cfg.mixed_precision.fp8_recipe == "mxfp8":
+    # Only disable these for Muon + MXFP8; for Adam leave them on for full perf (fp8 all-gather etc.).
+    if (
+        cfg.optimizer.optimizer == "dist_muon"
+        and cfg.mixed_precision is not None
+        and cfg.mixed_precision.fp8_recipe == "mxfp8"
+    ):
         cfg.mixed_precision.reuse_grad_buf_for_mxfp8_param_ag = False
         cfg.mixed_precision.fp8_param_gather = False
 
@@ -54,9 +57,12 @@ def set_kimi_k2_common_configs(cfg: ConfigContainer) -> None:
 
 
 def kimi_k2_pretrain_config_gb300(
-    precision: str = "bf16", mock: bool = True, config_variant: str = "v1"
+    precision: str = "bf16",
+    mock: bool = True,
+    config_variant: str = "v1",
+    optimizer_type: str = "muon",
 ) -> ConfigContainer:
-    """GB300, baseline config."""
+    """GB300, baseline config. optimizer_type: 'adam' or 'muon' (default)."""
     base_cfg = get_workload_base_config(
         model_family_name="kimi",
         model_recipe_name="kimi_k2",
@@ -66,7 +72,7 @@ def kimi_k2_pretrain_config_gb300(
         config_variant=config_variant,
     )
 
-    cfg = pretrain_config()
+    cfg = pretrain_config(optimizer_type=optimizer_type)
     precision_config = get_precision_config(precision)
     cfg.mixed_precision = precision_config
 
@@ -97,9 +103,12 @@ def kimi_k2_pretrain_config_gb300(
 
 
 def kimi_k2_pretrain_config_gb200(
-    precision: str = "bf16", mock: bool = True, config_variant: str = "v1"
+    precision: str = "bf16",
+    mock: bool = True,
+    config_variant: str = "v1",
+    optimizer_type: str = "muon",
 ) -> ConfigContainer:
-    """GB200, baseline config."""
+    """GB200, baseline config. optimizer_type: 'adam' or 'muon' (default)."""
     base_cfg = get_workload_base_config(
         model_family_name="kimi",
         model_recipe_name="kimi_k2",
@@ -109,7 +118,7 @@ def kimi_k2_pretrain_config_gb200(
         config_variant=config_variant,
     )
 
-    cfg = pretrain_config()
+    cfg = pretrain_config(optimizer_type=optimizer_type)
     precision_config = get_precision_config(precision)
     cfg.mixed_precision = precision_config
 
@@ -140,9 +149,12 @@ def kimi_k2_pretrain_config_gb200(
 
 
 def kimi_k2_pretrain_config_b200(
-    precision: str = "bf16", mock: bool = True, config_variant: str = "v1"
+    precision: str = "bf16",
+    mock: bool = True,
+    config_variant: str = "v1",
+    optimizer_type: str = "muon",
 ) -> ConfigContainer:
-    """B200, baseline config."""
+    """B200, baseline config. optimizer_type: 'adam' or 'muon' (default)."""
     base_cfg = get_workload_base_config(
         model_family_name="kimi",
         model_recipe_name="kimi_k2",
@@ -152,7 +164,7 @@ def kimi_k2_pretrain_config_b200(
         config_variant=config_variant,
     )
 
-    cfg = pretrain_config()
+    cfg = pretrain_config(optimizer_type=optimizer_type)
     precision_config = get_precision_config(precision)
     cfg.mixed_precision = precision_config
 
@@ -178,9 +190,12 @@ def kimi_k2_pretrain_config_b200(
 
 
 def kimi_k2_pretrain_config_h100(
-    precision: str = "bf16", mock: bool = True, config_variant: str = "v1"
+    precision: str = "bf16",
+    mock: bool = True,
+    config_variant: str = "v1",
+    optimizer_type: str = "muon",
 ) -> ConfigContainer:
-    """H100, baseline config."""
+    """H100, baseline config. optimizer_type: 'adam' or 'muon' (default)."""
     base_cfg = get_workload_base_config(
         model_family_name="kimi",
         model_recipe_name="kimi_k2",
@@ -190,7 +205,7 @@ def kimi_k2_pretrain_config_h100(
         config_variant=config_variant,
     )
 
-    cfg = pretrain_config()
+    cfg = pretrain_config(optimizer_type=optimizer_type)
     precision_config = get_precision_config(precision)
     cfg.mixed_precision = precision_config
 

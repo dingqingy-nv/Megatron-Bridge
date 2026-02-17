@@ -329,13 +329,25 @@ def _kimi_k2_common(
         raise ValueError(f"Invalid optimizer type: {optimizer_type}")
 
     if precision_config is None:
+        # Adam path typically uses grad_reduce_in_fp32=False (DeepSeek-style); Muon uses True.
+        grad_reduce_in_fp32_default = optimizer_type != "adam"
         precision_config = MixedPrecisionConfig(
             bf16=True,
             params_dtype=torch.bfloat16,
             pipeline_dtype=torch.bfloat16,
             autocast_enabled=False,
-            grad_reduce_in_fp32=True,
+            grad_reduce_in_fp32=grad_reduce_in_fp32_default,
         )
+
+    # DDP: Adam uses distributed optimizer + overlap (DeepSeek-style); Muon requires both off.
+    if optimizer_type == "adam":
+        use_distributed_optimizer = True
+        overlap_param_gather = True
+        grad_reduce_in_fp32_ddp = False
+    else:
+        use_distributed_optimizer = False
+        overlap_param_gather = False
+        grad_reduce_in_fp32_ddp = True
 
     cfg = ConfigContainer(
         model=model_cfg,
@@ -353,11 +365,11 @@ def _kimi_k2_common(
         scheduler=scheduler_cfg,
         ddp=DistributedDataParallelConfig(
             check_for_nan_in_grad=True,
-            grad_reduce_in_fp32=True,
+            grad_reduce_in_fp32=grad_reduce_in_fp32_ddp,
             overlap_grad_reduce=True,
-            overlap_param_gather=False,  # Muon needs this to be False
+            overlap_param_gather=overlap_param_gather,
             average_in_collective=True,
-            use_distributed_optimizer=False,  # Muon needs this to be False
+            use_distributed_optimizer=use_distributed_optimizer,
         ),
         dataset=GPTDatasetConfig(
             random_seed=1234,
