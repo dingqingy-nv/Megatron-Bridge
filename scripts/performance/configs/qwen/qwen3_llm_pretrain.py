@@ -38,6 +38,19 @@ def set_qwen3_common_configs(cfg: ConfigContainer) -> None:
     cfg.model.seq_length = 4096
     cfg.dataset.sequence_length = 4096
 
+    # WAR: MXFP8's fp8_param_gather and reuse_grad_buf_for_mxfp8_param_ag require
+    # DistributedOptimizer infrastructure (param/grad buffers, buckets), which is
+    # incompatible with dist_muon's LayerWiseDistributedOptimizer (wraps sub-optimizers
+    # in Float16OptimizerWithFloat16Params, not DistributedOptimizer).
+    # Only disable these for Muon + MXFP8; for Adam leave them on for full perf (fp8 all-gather etc.).
+    if (
+        cfg.optimizer.optimizer == "dist_muon"
+        and cfg.mixed_precision is not None
+        and cfg.mixed_precision.fp8_recipe == "mxfp8"
+    ):
+        cfg.mixed_precision.reuse_grad_buf_for_mxfp8_param_ag = False
+        cfg.mixed_precision.fp8_param_gather = False
+
     cfg.mixed_precision.grad_reduce_in_fp32 = False
     cfg.ddp.grad_reduce_in_fp32 = False
 
@@ -191,9 +204,9 @@ def qwen3_235b_a22b_pretrain_config_h100(
 
 
 def qwen3_30b_a3b_pretrain_config_gb300(
-    precision: str = "bf16", mock: bool = True, config_variant: str = "v1"
+    precision: str = "bf16", mock: bool = True, config_variant: str = "v1", optimizer_type: str = "adam"
 ) -> ConfigContainer:
-    """GB300, baseline config."""
+    """GB300, baseline config. optimizer_type: 'adam' or 'muon' (default: adam)."""
     base_cfg = get_workload_base_config(
         model_family_name="qwen",
         model_recipe_name="qwen3_30b_a3b",
@@ -209,6 +222,7 @@ def qwen3_30b_a3b_pretrain_config_gb300(
         precision_config=precision_config,
         comm_overlap_config=CommOverlapConfig(tp_comm_overlap=True),
         moe_flex_dispatcher_backend=base_cfg.moe_flex_dispatcher_backend,
+        optimizer_type=optimizer_type,
     )
     set_qwen3_common_configs(cfg)
     set_workload_base_configs(cfg, base_cfg)
@@ -217,9 +231,9 @@ def qwen3_30b_a3b_pretrain_config_gb300(
 
 
 def qwen3_30b_a3b_pretrain_config_gb200(
-    precision: str = "bf16", mock: bool = True, config_variant: str = "v1"
+    precision: str = "bf16", mock: bool = True, config_variant: str = "v1", optimizer_type: str = "adam"
 ) -> ConfigContainer:
-    """GB200, baseline config."""
+    """GB200, baseline config. optimizer_type: 'adam' or 'muon' (default: adam)."""
     base_cfg = get_workload_base_config(
         model_family_name="qwen",
         model_recipe_name="qwen3_30b_a3b",
@@ -235,6 +249,7 @@ def qwen3_30b_a3b_pretrain_config_gb200(
         precision_config=precision_config,
         comm_overlap_config=CommOverlapConfig(tp_comm_overlap=True),
         moe_flex_dispatcher_backend=base_cfg.moe_flex_dispatcher_backend,
+        optimizer_type=optimizer_type,
     )
     set_qwen3_common_configs(cfg)
     set_workload_base_configs(cfg, base_cfg)
@@ -243,9 +258,9 @@ def qwen3_30b_a3b_pretrain_config_gb200(
 
 
 def qwen3_30b_a3b_pretrain_config_b300(
-    precision: str = "bf16", mock: bool = True, config_variant: str = "v1"
+    precision: str = "bf16", mock: bool = True, config_variant: str = "v1", optimizer_type: str = "adam"
 ) -> ConfigContainer:
-    """B300, baseline config."""
+    """B300, baseline config. optimizer_type: 'adam' or 'muon' (default: adam)."""
     base_cfg = get_workload_base_config(
         model_family_name="qwen",
         model_recipe_name="qwen3_30b_a3b",
@@ -261,6 +276,7 @@ def qwen3_30b_a3b_pretrain_config_b300(
         precision_config=precision_config,
         comm_overlap_config=CommOverlapConfig(tp_comm_overlap=True),
         moe_flex_dispatcher_backend=base_cfg.moe_flex_dispatcher_backend,
+        optimizer_type=optimizer_type,
     )
     set_qwen3_common_configs(cfg)
     set_workload_base_configs(cfg, base_cfg)
@@ -269,9 +285,9 @@ def qwen3_30b_a3b_pretrain_config_b300(
 
 
 def qwen3_30b_a3b_pretrain_config_b200(
-    precision: str = "bf16", mock: bool = True, config_variant: str = "v1"
+    precision: str = "bf16", mock: bool = True, config_variant: str = "v1", optimizer_type: str = "adam"
 ) -> ConfigContainer:
-    """B200, baseline config."""
+    """B200, baseline config. optimizer_type: 'adam' or 'muon' (default: adam)."""
     base_cfg = get_workload_base_config(
         model_family_name="qwen",
         model_recipe_name="qwen3_30b_a3b",
@@ -287,6 +303,7 @@ def qwen3_30b_a3b_pretrain_config_b200(
         precision_config=precision_config,
         comm_overlap_config=CommOverlapConfig(tp_comm_overlap=True),
         moe_flex_dispatcher_backend=base_cfg.moe_flex_dispatcher_backend,
+        optimizer_type=optimizer_type,
     )
     set_qwen3_common_configs(cfg)
     set_workload_base_configs(cfg, base_cfg)
@@ -295,9 +312,9 @@ def qwen3_30b_a3b_pretrain_config_b200(
 
 
 def qwen3_30b_a3b_pretrain_config_h100(
-    precision: str = "bf16", mock: bool = True, config_variant: str = "v1"
+    precision: str = "bf16", mock: bool = True, config_variant: str = "v1", optimizer_type: str = "adam"
 ) -> ConfigContainer:
-    """H100, baseline config."""
+    """H100, baseline config. optimizer_type: 'adam' or 'muon' (default: adam)."""
     base_cfg = get_workload_base_config(
         model_family_name="qwen",
         model_recipe_name="qwen3_30b_a3b",
@@ -313,6 +330,7 @@ def qwen3_30b_a3b_pretrain_config_h100(
         precision_config=precision_config,
         comm_overlap_config=CommOverlapConfig(tp_comm_overlap=True),
         moe_flex_dispatcher_backend=base_cfg.moe_flex_dispatcher_backend,
+        optimizer_type=optimizer_type,
     )
     set_qwen3_common_configs(cfg)
     set_workload_base_configs(cfg, base_cfg)

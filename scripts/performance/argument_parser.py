@@ -517,7 +517,7 @@ def parse_cli_args():
         "--optimizer_type",
         type=str,
         choices=["adam", "muon"],
-        help="Optimizer type for recipes that support it (e.g. Kimi-K2). Defaults to muon.",
+        help="Optimizer type for recipes that support it (e.g. Kimi-K2, Qwen3). Defaults to muon.",
         required=False,
         default="muon",
     )

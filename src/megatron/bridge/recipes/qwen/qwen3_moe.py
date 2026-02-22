@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import os
 from typing import List, Optional, Union
 
@@ -23,7 +24,10 @@ from megatron.bridge import AutoBridge
 from megatron.bridge.peft.base import PEFT
 from megatron.bridge.recipes.utils.dataset_utils import get_blend_fields_from_data_paths
 from megatron.bridge.recipes.utils.finetune_utils import default_peft_config, default_squad_config
-from megatron.bridge.recipes.utils.optimizer_utils import distributed_fused_adam_with_cosine_annealing
+from megatron.bridge.recipes.utils.optimizer_utils import (
+    distributed_fused_adam_with_cosine_annealing,
+    distributed_muon_with_cosine_annealing,
+)
 from megatron.bridge.recipes.utils.tokenizer_utils import DEFAULT_NULL_TOKENIZER_VOCAB_SIZE
 from megatron.bridge.training.comm_overlap import CommOverlapConfig
 from megatron.bridge.training.config import (
@@ -37,6 +41,9 @@ from megatron.bridge.training.config import (
 )
 from megatron.bridge.training.flex_dispatcher_backend import apply_flex_dispatcher_backend
 from megatron.bridge.training.mixed_precision import MixedPrecisionConfig, bf16_mixed, get_mixed_precision_config
+
+
+logger = logging.getLogger(__name__)
 
 
 class Qwen3MoeCommonKwargs(TypedDict, total=False):
@@ -79,6 +86,7 @@ class Qwen3MoeCommonKwargs(TypedDict, total=False):
     eval_interval: int
     save_interval: int
     use_null_tokenizer: bool
+    optimizer_type: str
     # Precision / overlap configs
     precision_config: Optional[Union[MixedPrecisionConfig, str]]
     comm_overlap_config: Optional[CommOverlapConfig]
@@ -202,6 +210,7 @@ def _qwen3_moe_common(
     eval_interval: int = 500,
     save_interval: int = 500,
     use_null_tokenizer: bool = False,
+    optimizer_type: str = "adam",
     # Precision recipe
     precision_config: Optional[Union[MixedPrecisionConfig, str]] = None,
     comm_overlap_config: Optional[CommOverlapConfig] = None,
@@ -241,6 +250,7 @@ def _qwen3_moe_common(
         min_lr (float): Minimum learning rate for cosine decay.
         lr_warmup_iters (int): Number of warmup iterations for the learning rate.
         lr_decay_iters (Optional[int]): Number of iterations over which to decay the LR.
+        optimizer_type (str): Type of optimizer ("adam" or "muon").
         precision_config (Optional[Union[MixedPrecisionConfig, str]]): Precision configuration for the model.
         comm_overlap_config (Optional[CommOverlapConfig]): Communication overlap configuration.
         moe_flex_dispatcher_backend (str | None): Token dispatcher type [deepep, hybridep].
@@ -270,7 +280,16 @@ def _qwen3_moe_common(
     apply_flex_dispatcher_backend(model_cfg, moe_flex_dispatcher_backend)
 
     if precision_config is None:
-        precision_config = bf16_mixed()
+        if optimizer_type == "muon":
+            precision_config = MixedPrecisionConfig(
+                bf16=True,
+                params_dtype=torch.bfloat16,
+                pipeline_dtype=torch.bfloat16,
+                autocast_enabled=False,
+                grad_reduce_in_fp32=True,
+            )
+        else:
+            precision_config = bf16_mixed()
 
     # MoE-specific pipeline split configurations
     if account_for_embedding_in_pipeline_split:
@@ -286,12 +305,32 @@ def _qwen3_moe_common(
     model_cfg.seq_length = seq_length
     model_cfg.cross_entropy_fusion_impl = "te"
 
-    opt_config, scheduler = distributed_fused_adam_with_cosine_annealing(
-        lr_warmup_iters=lr_warmup_iters,
-        lr_decay_iters=lr_decay_iters,
-        max_lr=lr,
-        min_lr=min_lr,
-    )
+    if optimizer_type == "adam":
+        opt_config, scheduler = distributed_fused_adam_with_cosine_annealing(
+            lr_warmup_iters=lr_warmup_iters,
+            lr_decay_iters=lr_decay_iters,
+            max_lr=lr,
+            min_lr=min_lr,
+        )
+    elif optimizer_type == "muon":
+        opt_config, scheduler = distributed_muon_with_cosine_annealing(
+            lr_warmup_iters=lr_warmup_iters,
+            lr_decay_iters=lr_decay_iters,
+            max_lr=lr,
+            min_lr=min_lr,
+        )
+    else:
+        raise ValueError(f"Invalid optimizer type: {optimizer_type}")
+
+    if optimizer_type == "adam":
+        use_distributed_optimizer = True
+        overlap_param_gather = True
+    else:
+        use_distributed_optimizer = False
+        overlap_param_gather = False
+
+    if optimizer_type == "muon" and use_megatron_fsdp:
+        raise ValueError("Muon optimizer is incompatible with Megatron FSDP (requires use_distributed_optimizer=True)")
 
     # Config Container
     cfg = ConfigContainer(
@@ -312,10 +351,10 @@ def _qwen3_moe_common(
             check_for_nan_in_grad=True,
             grad_reduce_in_fp32=True,
             overlap_grad_reduce=True,
-            overlap_param_gather=True,
+            overlap_param_gather=overlap_param_gather,
             average_in_collective=True,  # Not supported for Megatron FSDP for now, need to be set to False if using Megatron FSDP
             data_parallel_sharding_strategy="optim_grads_params",  # For Megatron FSDP only
-            use_distributed_optimizer=True,
+            use_distributed_optimizer=use_distributed_optimizer,
             use_megatron_fsdp=use_megatron_fsdp,  # need use_distributed_optimizer=True
         ),
         dataset=GPTDatasetConfig(
@@ -354,6 +393,24 @@ def _qwen3_moe_common(
         comm_overlap=comm_overlap_config,
         mixed_precision=precision_config,
     )
+
+    # WAR: MXFP8's fp8_param_gather and reuse_grad_buf_for_mxfp8_param_ag require
+    # DistributedOptimizer infrastructure (param/grad buffers, buckets), which is
+    # incompatible with dist_muon's LayerWiseDistributedOptimizer. The layerwise optimizer
+    # wraps sub-optimizers in Float16OptimizerWithFloat16Params (not DistributedOptimizer),
+    # which lacks _copy_main_params_to_param_buffer().
+    # Disable these flags when using Muon + MXFP8. This uses more GPU memory but avoids
+    # the crash. See also: overlap_param_gather=False and use_distributed_optimizer=False
+    # in the DDP config above.
+    if optimizer_type == "muon" and cfg.mixed_precision is not None:
+        mp = cfg.mixed_precision
+        if isinstance(mp, MixedPrecisionConfig) and mp.fp8_recipe == "mxfp8":
+            logger.warning(
+                "Disabling fp8_param_gather and reuse_grad_buf_for_mxfp8_param_ag "
+                "for MXFP8 + Muon (incompatible with LayerWiseDistributedOptimizer)."
+            )
+            mp.reuse_grad_buf_for_mxfp8_param_ag = False
+            mp.fp8_param_gather = False
 
     return cfg
 

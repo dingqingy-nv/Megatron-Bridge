@@ -248,8 +248,11 @@ def get_perf_optimized_recipe(
 
     if train_task == "pretrain":
         kwargs = {"precision": compute_dtype, "mock": mock, "config_variant": config_variant}
-        # Only Kimi pretrain configs accept optimizer_type; others (llama, deepseek, etc.) do not.
-        if optimizer_type is not None and model_family_name == "kimi":
+        # Only Kimi and Qwen3-30B pretrain configs accept optimizer_type; others do not.
+        if optimizer_type is not None and (
+            model_family_name == "kimi"
+            or (model_family_name == "qwen" and model_recipe_name == "qwen3_30b_a3b")
+        ):
             kwargs["optimizer_type"] = optimizer_type
         return recipe_builder(**kwargs)
     else:
