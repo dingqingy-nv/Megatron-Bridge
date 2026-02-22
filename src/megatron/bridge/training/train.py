@@ -14,6 +14,7 @@
 
 import gc
 import os
+import signal
 import sys
 import time
 from collections import deque
@@ -282,6 +283,32 @@ def train(
             ),
         )
 
+    # Enable CUDA memory history recording so that torch.cuda.memory._snapshot()
+    # captures allocation/free timelines and stack traces (not just a bare summary).
+    if (
+        config.profiling
+        and config.profiling.record_memory_history
+        and should_profile_rank(config.profiling, torch.distributed.get_rank())
+    ):
+        torch.cuda.memory._record_memory_history(max_entries=100_000)
+
+        # Register SIGUSR1 handler to dump a memory snapshot on demand (e.g. during hangs).
+        # Usage: kill -USR1 <pid>
+        def _dump_memory_snapshot_on_signal(signum, frame):
+            try:
+                snapshot = torch.cuda.memory._snapshot()
+                from pickle import dump
+
+                filename, ext = os.path.splitext(config.profiling.memory_snapshot_path)
+                filename = f"{filename}_sigusr1_{global_state.train_state.step}_{torch.distributed.get_rank()}{ext}"
+                with open(filename, "wb") as f:
+                    dump(snapshot, f)
+                print(f"[Rank {torch.distributed.get_rank()}] Saved memory snapshot to {filename}", flush=True)
+            except Exception as e:
+                print(f"[Rank {torch.distributed.get_rank()}] Failed to dump memory snapshot on signal: {e}", flush=True)
+
+        signal.signal(signal.SIGUSR1, _dump_memory_snapshot_on_signal)
+
     # Run training iterations till done.
     while global_state.train_state.step < train_config.train_iters:
         # Handle profiling for this step
@@ -363,25 +390,48 @@ def train(
                 ),
             )
 
-        (
-            loss_dict,
-            skipped_iter,
-            should_checkpoint,
-            should_exit,
-            exit_code,
-            grad_norm,
-            num_zeros_in_grad,
-            log_max_attention_logit,
-        ) = wrapped_train_step(
-            wrapped_forward_step_func,
-            train_data_iterator,
-            model,
-            optimizer,
-            scheduler,
-            global_state,
-            pg_collection,
-            forward_backward_func,
-        )
+        try:
+            (
+                loss_dict,
+                skipped_iter,
+                should_checkpoint,
+                should_exit,
+                exit_code,
+                grad_norm,
+                num_zeros_in_grad,
+                log_max_attention_logit,
+            ) = wrapped_train_step(
+                wrapped_forward_step_func,
+                train_data_iterator,
+                model,
+                optimizer,
+                scheduler,
+                global_state,
+                pg_collection,
+                forward_backward_func,
+            )
+        except Exception:
+            if (
+                config.profiling
+                and config.profiling.record_memory_history
+                and should_profile_rank(config.profiling, torch.distributed.get_rank())
+            ):
+                # Defensively wrap the snapshot dump so it never masks the original error.
+                try:
+                    print_rank_0(
+                        f"Exception at step {global_state.train_state.step}, saving memory snapshot..."
+                    )
+                    snapshot = torch.cuda.memory._snapshot()
+                    from pickle import dump
+
+                    filename, ext = os.path.splitext(config.profiling.memory_snapshot_path)
+                    filename = f"{filename}_crash_{global_state.train_state.step}_{torch.distributed.get_rank()}{ext}"
+                    with open(filename, "wb") as f:
+                        dump(snapshot, f)
+                    print_rank_0(f"Saved crash memory snapshot to {filename}")
+                except Exception as dump_err:
+                    print_rank_0(f"Failed to save memory snapshot on crash: {dump_err}")
+            raise
 
         fault_tolerance.on_training_step_end(global_state)
 

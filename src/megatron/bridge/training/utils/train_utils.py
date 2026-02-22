@@ -465,17 +465,24 @@ def training_log(
 
     if config.profiling:
         if config.profiling.record_memory_history and get_rank_safe() in config.profiling.profile_ranks:
-            assert config.logger.tensorboard_dir is not None, (
-                "Tensorboard directory must be set when profiling memory history"
-            )
-            snapshot = torch.cuda.memory._snapshot()
-            from pickle import dump
+            prof_start = config.profiling.profile_step_start
+            prof_end = config.profiling.profile_step_end
+            # Save a snapshot only within the profiling window, with a final one
+            # at profile_step_end + 1 to capture the last profiled step's state.
+            if prof_start <= iteration <= prof_end + 1:
+                snapshot = torch.cuda.memory._snapshot()
+                from pickle import dump
 
-            filename, ext = os.path.splitext(config.profiling.memory_snapshot_path)
-            filename = f"{filename}_{get_rank_safe()}{ext}"
-            with open(filename, "wb") as f:
-                dump(snapshot, f)
+                filename, ext = os.path.splitext(config.profiling.memory_snapshot_path)
+                filename = f"{filename}_{get_rank_safe()}{ext}"
+                with open(filename, "wb") as f:
+                    dump(snapshot, f)
                 print_rank_0(f"Saved memory snapshot to {filename}")
+
+            # Stop recording after the profiling window to avoid ongoing overhead.
+            if iteration == prof_end + 1:
+                torch.cuda.memory._record_memory_history(None)
+                print_rank_0("Stopped CUDA memory history recording after profiling window.")
 
     if writer and (iteration % logger_config.tensorboard_log_interval == 0):
         if logger_config.log_throughput_to_tensorboard:
