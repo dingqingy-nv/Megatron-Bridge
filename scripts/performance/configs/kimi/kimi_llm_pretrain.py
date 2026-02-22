@@ -31,6 +31,8 @@ def set_kimi_k2_common_configs(cfg: ConfigContainer) -> None:
     """Set common performance configurations for all Kimi-K2 configs."""
     cfg.model.seq_length = 4096
     cfg.dataset.sequence_length = 4096
+    # cfg.model.num_layers = 13
+    # cfg.model.moe_layer_freq = [0] + [1] * 12
 
     # WAR: MXFP8's fp8_param_gather and reuse_grad_buf_for_mxfp8_param_ag require
     # DistributedOptimizer infrastructure (param/grad buffers, buckets), which is
@@ -53,7 +55,7 @@ def set_kimi_k2_common_configs(cfg: ConfigContainer) -> None:
     cfg.ddp.grad_reduce_in_fp32 = False
 
     cfg.model.moe_router_force_load_balancing = True
-    cfg.model.qk_clip = True
+    cfg.model.qk_clip = False # disable qk_clip for now, enable it after MCORE fix drop in
 
 
 def kimi_k2_pretrain_config_gb300(

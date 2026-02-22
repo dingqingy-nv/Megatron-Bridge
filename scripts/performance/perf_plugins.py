@@ -284,6 +284,9 @@ class PerfEnvPlugin(Plugin):
             if model_family_name == "deepseek":
                 if compute_dtype == "fp8_mx":
                     del_cudnn_ln = False
+            if model_family_name == "kimi":
+                if compute_dtype == "fp8_mx":
+                    del_cudnn_ln = False
         if del_cudnn_ln:
             if "NVTE_NORM_FWD_USE_CUDNN" in executor.env_vars:
                 executor.env_vars.pop("NVTE_NORM_FWD_USE_CUDNN")
