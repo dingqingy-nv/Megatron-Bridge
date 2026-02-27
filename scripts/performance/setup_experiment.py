@@ -30,12 +30,12 @@ try:
     from argument_parser import parse_cli_args
     from utils.evaluate import calc_convergence_and_performance
     from utils.executors import dgxc_executor, slurm_executor
-    from utils.utils import get_exp_name_config, select_config_variant_interactive
+    from utils.utils import get_exp_name_config, get_workload_base_config, select_config_variant_interactive
 except (ImportError, ModuleNotFoundError):
     from .argument_parser import parse_cli_args
     from .utils.evaluate import calc_convergence_and_performance
     from .utils.executors import dgxc_executor, slurm_executor
-    from .utils.utils import get_exp_name_config, select_config_variant_interactive
+    from .utils.utils import get_exp_name_config, get_workload_base_config, select_config_variant_interactive
 
 try:
     import wandb
@@ -207,7 +207,7 @@ def main(
     custom_env_vars: Dict[str, str],
     custom_srun_args: List[str],
     custom_bash_cmds: List[List[str]],
-    nccl_ub: bool,
+    nccl_ub: Optional[bool],
     pretrained_checkpoint: Optional[str],
     num_gpus: int,
     is_long_convergence_run: bool,
@@ -277,6 +277,13 @@ def main(
             f"{SCRIPT_DIR}:{SCRIPT_DIR}",
         ]
     )
+
+    # Resolve nccl_ub: CLI flag takes precedence; fall back to workload base config.
+    if nccl_ub is None:
+        workload_base_config = get_workload_base_config(
+            model_family_name, model_recipe_name, gpu, compute_dtype, task, config_variant
+        )
+        nccl_ub = workload_base_config.nccl_ub or False
 
     if nccl_ub:
         custom_env_vars.update({"NCCL_NVLS_ENABLE": "1", "NCCL_CTA_POLICY": "1"})
