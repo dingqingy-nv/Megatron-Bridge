@@ -65,6 +65,8 @@ def nemotron_3_super_pretrain_config() -> ConfigContainer:
     cfg.model.moe_token_dispatcher_type = "alltoall"
     cfg.model.moe_shared_expert_overlap = False
     cfg.model.moe_flex_dispatcher_backend = "hybridep"
+    # Megatron-LM: --moe-router-padding-for-quantization (alias moe_router_padding_for_fp8)
+    cfg.model.moe_router_padding_for_fp8 = True
 
     # Training Configuration
     cfg.train.train_iters = 39735
