@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import logging
+import os
 
 import torch
 from argument_parser import parse_cli_args
@@ -30,6 +31,14 @@ logger = logging.getLogger(__name__)
 
 def main():
     """Main function to run the pretraining/finetuning script."""
+    # Dump environment variables on rank 0 if DUMP_ENV is set.
+    if os.environ.get("DUMP_ENV") == "1" and int(os.environ.get("SLURM_PROCID", "0")) == 0:
+        env_path = os.environ.get("DUMP_ENV_PATH", "/nemo_run/env_dump.txt")
+        with open(env_path, "w") as f:
+            for k, v in sorted(os.environ.items()):
+                f.write(f"{k}={v}\n")
+        print(f"Environment dumped to {env_path}")
+
     # Parse known args and treat any unknown args as Hydra-style config overrides.
     # `argparse.parse_known_args()` returns the unknown args as a `list[str]`.
     parser = parse_cli_args()
