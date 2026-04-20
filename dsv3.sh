@@ -41,8 +41,7 @@ python -m scripts.performance.setup_experiment -m $MODEL -mr $MODEL_RECIPE --tas
 --gpu $GPU \
 -c $DTYPE \
 -cv v2 \
--gn 4 -ms 3 \
+-gn 4 -ms 50 \
 --gres gpu:4 \
--ce NCCL_DEBUG=INFO,NCCL_DEBUG_FILE=/nemo_run/nccl_debug_%h_%p.log,DUMP_ENV=1 \
-dist.nccl_communicator_config_path=$(readlink -f $MBRIDGE/scripts/performance/nccl_communicator_config.yaml)
+-ce DUMP_ENV=1
 done

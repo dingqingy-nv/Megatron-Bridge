@@ -31,6 +31,11 @@ logger = logging.getLogger(__name__)
 
 def main():
     """Main function to run the pretraining/finetuning script."""
+    # Unset cluster-injected NCCL vars that may cause suboptimal performance.
+    # These are overridden by the cluster at container level and differ from healthy clusters.
+    for var in ["NCCL_NET_PLUGIN", "NCCL_MNNVL_ENABLE", "NCCL_CUMEM_ENABLE"]:
+        os.environ.pop(var, None)
+
     # Dump environment variables on rank 0 if DUMP_ENV is set.
     if os.environ.get("DUMP_ENV") == "1" and int(os.environ.get("SLURM_PROCID", "0")) == 0:
         env_path = os.environ.get("DUMP_ENV_PATH", "/nemo_run/env_dump.txt")
