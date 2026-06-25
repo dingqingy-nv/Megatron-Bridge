@@ -13,10 +13,13 @@ if HAVE_MEGATRON_BRIDGE:
         deepseek_v3_pretrain_config_gb300,
         deepseek_v3_pretrain_config_h100,
         deepseek_v3_pretrain_config_vr200,
+        deepseek_v3_proxy_pretrain_config_vr200,
         deepseek_v4_pro_pretrain_config_gb200,
         deepseek_v4_pro_pretrain_config_gb300,
+        deepseek_v4_pro_pretrain_config_vr200,
         deepseek_v4_pro_proxy_pretrain_config_gb200,
         deepseek_v4_pro_proxy_pretrain_config_gb300,
+        deepseek_v4_pro_proxy_pretrain_config_vr200,
         deepseek_v4_pro_proxy_pp2_pretrain_config_gb200,
     )
 
@@ -75,8 +78,13 @@ from .deepseek_workload_base_configs import (
     DEEPSEEK_V3_PRETRAIN_CONFIG_VR200_NVFP4_V2,
     DEEPSEEK_V4_PRO_PRETRAIN_CONFIG_GB200_FP8_MX_V1,
     DEEPSEEK_V4_PRO_PRETRAIN_CONFIG_GB300_FP8_MX_V1,
+    DEEPSEEK_V4_PRO_PRETRAIN_CONFIG_VR200_FP8_MX_V1,
     DEEPSEEK_V4_PRO_PROXY_PRETRAIN_CONFIG_GB200_FP8_MX_V1,
     DEEPSEEK_V4_PRO_PROXY_PRETRAIN_CONFIG_GB300_FP8_MX_V1,
+    DEEPSEEK_V4_PRO_PROXY_PRETRAIN_CONFIG_VR200_FP8_MX_V1,
+    DEEPSEEK_V4_PRO_PROXY_PRETRAIN_CONFIG_VR200_FP8_MX_V2,
+    DEEPSEEK_V4_PRO_PROXY_PRETRAIN_CONFIG_VR200_FP8_MX_V3,
+    DEEPSEEK_V3_PROXY_PRETRAIN_CONFIG_VR200_FP8_MX_V1,
     DEEPSEEK_V4_PRO_PROXY_PP2_PRETRAIN_CONFIG_GB200_FP8_MX_V1,
     DEEPSEEK_V4_PRO_PROXY_PP2_PRETRAIN_CONFIG_GB300_FP8_MX_V1,
 )
@@ -86,8 +94,13 @@ __all__ = [
     # DeepSeek V4 Pro (MXFP8)
     "DEEPSEEK_V4_PRO_PRETRAIN_CONFIG_GB300_FP8_MX_V1",
     "DEEPSEEK_V4_PRO_PRETRAIN_CONFIG_GB200_FP8_MX_V1",
+    "DEEPSEEK_V4_PRO_PRETRAIN_CONFIG_VR200_FP8_MX_V1",
     "DEEPSEEK_V4_PRO_PROXY_PRETRAIN_CONFIG_GB200_FP8_MX_V1",
     "DEEPSEEK_V4_PRO_PROXY_PRETRAIN_CONFIG_GB300_FP8_MX_V1",
+    "DEEPSEEK_V4_PRO_PROXY_PRETRAIN_CONFIG_VR200_FP8_MX_V1",
+    "DEEPSEEK_V4_PRO_PROXY_PRETRAIN_CONFIG_VR200_FP8_MX_V2",
+    "DEEPSEEK_V4_PRO_PROXY_PRETRAIN_CONFIG_VR200_FP8_MX_V3",
+    "DEEPSEEK_V3_PROXY_PRETRAIN_CONFIG_VR200_FP8_MX_V1",
     "DEEPSEEK_V4_PRO_PROXY_PP2_PRETRAIN_CONFIG_GB200_FP8_MX_V1",
     "DEEPSEEK_V4_PRO_PROXY_PP2_PRETRAIN_CONFIG_GB300_FP8_MX_V1",
     # V1 (GBS=2048 for Blackwell, GBS=8192 for H100)
@@ -157,10 +170,13 @@ if HAVE_MEGATRON_BRIDGE:
             "deepseek_v3_pretrain_config_b200",
             "deepseek_v3_pretrain_config_h100",
             "deepseek_v3_pretrain_config_vr200",
+            "deepseek_v3_proxy_pretrain_config_vr200",
             "deepseek_v4_pro_pretrain_config_gb200",
             "deepseek_v4_pro_pretrain_config_gb300",
+            "deepseek_v4_pro_pretrain_config_vr200",
             "deepseek_v4_pro_proxy_pretrain_config_gb200",
             "deepseek_v4_pro_proxy_pretrain_config_gb300",
+            "deepseek_v4_pro_proxy_pretrain_config_vr200",
             "deepseek_v4_pro_proxy_pp2_pretrain_config_gb200",
         ]
     )

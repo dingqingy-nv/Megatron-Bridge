@@ -360,6 +360,11 @@ DEEPSEEK_V4_PRO_PRETRAIN_CONFIG_GB300_FP8_MX_V1 = replace(
 )
 DEEPSEEK_V4_PRO_PRETRAIN_CONFIG_GB200_FP8_MX_V1 = DEEPSEEK_V4_PRO_PRETRAIN_CONFIG_GB300_FP8_MX_V1
 
+# Rubin (VR200) full 61-layer Pro: identical workload to the GB300 full Pro (TP1/PP4/VPP4/EP64,
+# GBS4096, 256 GPUs, FGO of core_attn/attn_proj). The vr200 builder adds the Rubin SwiGLU-clamp
+# fix; NVTE_CPU_OFFLOAD_V1 (FGO) + NCCL GDR env are passed by the launcher (not auto-set for vr200).
+DEEPSEEK_V4_PRO_PRETRAIN_CONFIG_VR200_FP8_MX_V1 = DEEPSEEK_V4_PRO_PRETRAIN_CONFIG_GB300_FP8_MX_V1
+
 # 8-layer proxy: TP=1, PP=1, EP=64 on 64 GPUs (one NVL72 domain), GBS=2048,
 # no recompute (everything fits under full-iteration CUDA graph).
 DEEPSEEK_V4_PRO_PROXY_PRETRAIN_CONFIG_GB200_FP8_MX_V1 = replace(
@@ -374,6 +379,71 @@ DEEPSEEK_V4_PRO_PROXY_PRETRAIN_CONFIG_GB200_FP8_MX_V1 = replace(
     recompute_modules=[],
 )
 DEEPSEEK_V4_PRO_PROXY_PRETRAIN_CONFIG_GB300_FP8_MX_V1 = DEEPSEEK_V4_PRO_PROXY_PRETRAIN_CONFIG_GB200_FP8_MX_V1
+
+# Rubin (VR200) fail-fast pipeclean: 3-layer proxy on 8 GPUs (2 nodes / 4 GPUs each),
+# TP1/PP1/EP8, full MXFP8 + full-iteration CUDA-graph + fused-DSA + cuteDSL stack
+# (inherits BASE_DEEPSEEK_V4_PRO_CONFIG). EP64 won't fit on 8 GPUs, so EP=8 spans every
+# GPU (expert-DP=1); num_layers=3 is applied in the perf builder. GBS=64 -> 8 microbatches
+# per DP rank. Smallest shape that still exercises the production perf knobs end-to-end.
+DEEPSEEK_V4_PRO_PROXY_PRETRAIN_CONFIG_VR200_FP8_MX_V1 = replace(
+    BASE_DEEPSEEK_V4_PRO_CONFIG,
+    num_gpus=8,
+    micro_batch_size=1,
+    global_batch_size=64,
+    pipeline_model_parallel_size=1,
+    virtual_pipeline_model_parallel_size=None,
+    expert_model_parallel_size=8,
+    pp_layout=None,
+    recompute_modules=[],
+)
+
+# Rubin (VR200) single-NVL-domain depth probe (config_variant="v2"): 16 layers on 64 GPUs
+# (TP1/PP1/EP64, GBS2048), mirroring the GB200 proxy parallelism but WITH recompute
+# (mla_up_proj+mhc, like the full Pro) for memory headroom / safety. PP1 -> no inter-block PP comm,
+# so this is the single-domain baseline at full-Pro stage-0 depth. (num_layers=16 set in the builder.)
+DEEPSEEK_V4_PRO_PROXY_PRETRAIN_CONFIG_VR200_FP8_MX_V2 = replace(
+    DEEPSEEK_V4_PRO_PROXY_PRETRAIN_CONFIG_GB200_FP8_MX_V1,
+    recompute_modules=["mla_up_proj", "mhc"],
+)
+
+# Rubin (VR200) "first+last rank" probe (config_variant="v3"): 29 transformer layers over PP2/VPP4
+# on 128 GPUs (2 NVL blocks), EP64, GBS4096, MTP=1. The layout "Et*4|(t*4|)*6tmL" reproduces the
+# full 61L Pro's first rank (embed+16L) and last rank (13L+MTP+loss), adding one cross-NVL-domain PP
+# boundary so its point-to-point cost can be measured at half scale. recompute mla_up_proj+mhc here
+# + FGO in the builder so the heavy stage 0 fits the POR ceiling, matching the full run.
+DEEPSEEK_V4_PRO_PROXY_PRETRAIN_CONFIG_VR200_FP8_MX_V3 = replace(
+    BASE_DEEPSEEK_V4_PRO_CONFIG,
+    num_gpus=128,
+    micro_batch_size=1,
+    global_batch_size=4096,
+    pipeline_model_parallel_size=2,
+    virtual_pipeline_model_parallel_size=4,
+    expert_model_parallel_size=64,
+    pp_layout="Et*4|(t*4|)*6tmL",
+    recompute_modules=["mla_up_proj", "mhc"],
+)
+
+
+# DeepSeek-V3 cuteDSL 3L proxy (vr200): diagnostic to test whether the cuteDSL fused
+# grouped-GEMM-GLU compiles on Rubin sm100f for a (non-DSA, non-clamped) DSv3 MoE — isolates
+# the cuteDSL/cudnn-fe path from DSv4-specific code. 3 all-MoE layers, EP8/PP1 on 8 GPUs,
+# full-iteration CG + cuteDSL on (same perf knobs as the dsv3 gb200 FP8_MX config).
+DEEPSEEK_V3_PROXY_PRETRAIN_CONFIG_VR200_FP8_MX_V1 = replace(
+    BASE_DEEPSEEK_V3_CONFIG,
+    num_gpus=8,
+    micro_batch_size=1,
+    global_batch_size=64,
+    pipeline_model_parallel_size=1,
+    virtual_pipeline_model_parallel_size=None,
+    expert_model_parallel_size=8,
+    moe_flex_dispatcher_backend="hybridep",
+    moe_a2a_overlap=False,
+    cuda_graph_impl="full_iteration",
+    cuda_graph_scope=[],
+    cutedsl_fused_grouped_mlp=True,
+    pp_layout=None,
+    recompute_modules=[],
+)
 
 # Multi-stage proxy (PP2/VPP4 + MTP) for reproducing the full-Pro scaling-mode crash
 # at small scale. 15 transformer layers over 8 virtual stages (PP2*VPP4); last stage =
@@ -397,8 +467,13 @@ __all__ = [
     # DeepSeek V4 Pro (MXFP8)
     "DEEPSEEK_V4_PRO_PRETRAIN_CONFIG_GB300_FP8_MX_V1",
     "DEEPSEEK_V4_PRO_PRETRAIN_CONFIG_GB200_FP8_MX_V1",
+    "DEEPSEEK_V4_PRO_PRETRAIN_CONFIG_VR200_FP8_MX_V1",
     "DEEPSEEK_V4_PRO_PROXY_PRETRAIN_CONFIG_GB200_FP8_MX_V1",
     "DEEPSEEK_V4_PRO_PROXY_PRETRAIN_CONFIG_GB300_FP8_MX_V1",
+    "DEEPSEEK_V4_PRO_PROXY_PRETRAIN_CONFIG_VR200_FP8_MX_V1",
+    "DEEPSEEK_V4_PRO_PROXY_PRETRAIN_CONFIG_VR200_FP8_MX_V2",
+    "DEEPSEEK_V4_PRO_PROXY_PRETRAIN_CONFIG_VR200_FP8_MX_V3",
+    "DEEPSEEK_V3_PROXY_PRETRAIN_CONFIG_VR200_FP8_MX_V1",
     "DEEPSEEK_V4_PRO_PROXY_PP2_PRETRAIN_CONFIG_GB200_FP8_MX_V1",
     "DEEPSEEK_V4_PRO_PROXY_PP2_PRETRAIN_CONFIG_GB300_FP8_MX_V1",
     # V1 (original GBS settings)
