@@ -24,7 +24,15 @@ MBRIDGE="${MBRIDGE:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"  # Megatron-
 ROOTDIR="$(dirname "$MBRIDGE")"
 cd "$MBRIDGE" || exit 1                                             # so `python -m scripts.performance...` resolves
 export NEMORUN_HOME="${NEMORUN_HOME:-$ROOTDIR/.nemo_run}"
+# Pinned mcore dev commit (NVIDIA/Megatron-LM `dev`, DSv4 mHC fused kernels). The bind-mounted
+# clone must be at this commit to reproduce; override MCORE_DEV, or set MCORE_COMMIT= to bypass.
+MCORE_COMMIT=${MCORE_COMMIT:-9d46c924dce3818f2b5f894f7380712c780d1801}
 MCORE_DEV=${MCORE_DEV:-$ROOTDIR/megatron-lm-dev}
+if [ -n "$MCORE_COMMIT" ] && [ -d "$MCORE_DEV/.git" ] && \
+   [ "$(git -C "$MCORE_DEV" rev-parse HEAD 2>/dev/null)" != "$MCORE_COMMIT" ]; then
+  echo "WARNING: $MCORE_DEV not at pinned commit $MCORE_COMMIT" >&2
+  echo "         fix: git -C '$MCORE_DEV' fetch origin && git -C '$MCORE_DEV' checkout $MCORE_COMMIT" >&2
+fi
 
 CONT=${CONT:-/lustre/fsw/coreai_dlalgo_llm/dingqingy/sqsh/nemo_mlperf_dsv4_ready.sqsh}
 CONT_NAME=$(basename "$CONT" | tr ':/' '__')
