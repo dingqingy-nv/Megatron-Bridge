@@ -30,9 +30,11 @@
 VENV=${VENV:-/lustre/fsw/coreai_dlalgo_llm/dingqingy/2604release/bridge_env}
 source "$VENV/bin/activate"
 
-ROOTDIR=$(dirname "$PWD")
-export NEMORUN_HOME=$ROOTDIR/.nemo_run
-MBRIDGE=$PWD
+# Resolve paths from THIS script's location (not $PWD) so it runs from any cwd.
+MBRIDGE="${MBRIDGE:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"  # Megatron-Bridge checkout (script lives at its root)
+ROOTDIR="$(dirname "$MBRIDGE")"
+cd "$MBRIDGE" || exit 1                                             # so `python -m scripts.performance...` resolves
+export NEMORUN_HOME="${NEMORUN_HOME:-$ROOTDIR/.nemo_run}"
 
 # Megatron-LM `dev` ToT, bind-mounted over the container's bundled mcore.
 MCORE_DEV=${MCORE_DEV:-$ROOTDIR/megatron-lm-dev}
